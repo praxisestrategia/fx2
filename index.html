@@ -131,10 +131,32 @@
       background-color: var(--bg-surface);
       border: none;
       border-radius: 0;
-      padding: 24px;
+      padding: 0;
       margin-bottom: 16px;
       position: relative;
       overflow: hidden;
+      aspect-ratio: 4 / 5;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tweet-content {
+      padding: 24px;
+    }
+
+    #mediaContainer {
+      flex: 1;
+      width: 100%;
+      display: none;
+      background-color: #FAFAFA;
+      border-top: 1px solid var(--border-color);
+    }
+
+    #mediaContainer img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     #tweetHeader {
@@ -250,6 +272,7 @@
         display: flex;
         gap: 8px;
         width: 100%;
+        flex-wrap: wrap;
       }
 
       .format-group button {
@@ -287,21 +310,29 @@
       <option value="24px">Fonte: Mt. Grande</option>
     </select>
 
-    <div class="format-group" style="display: flex; gap: 8px;">
+    <div class="format-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
       <button class="format-btn" data-cmd="bold" title="Negrito"><strong>B</strong></button>
       <button class="format-btn" data-cmd="underline" title="Sublinhado"><u>U</u></button>
+      <button class="format-btn" id="uploadImgBtn" style="flex-grow: 1; padding: 8px 16px;">Adicionar Imagem</button>
+      <button class="format-btn" id="removeImgBtn" style="display: none; padding: 8px 16px; color: #e53935;">Remover Imagem</button>
+      <input type="file" id="imgInput" accept="image/*" hidden>
     </div>
   </div>
 
   <div id="tweetContainer">
-    <div id="tweetHeader">
-      <img id="profileImg" src="" alt="Foto de perfil">
-      <div class="profile-info">
-        <div id="profileName"></div>
-        <div id="profileHandle"></div>
+    <div class="tweet-content">
+      <div id="tweetHeader">
+        <img id="profileImg" src="" alt="Foto de perfil">
+        <div class="profile-info">
+          <div id="profileName"></div>
+          <div id="profileHandle"></div>
+        </div>
       </div>
+      <div id="tweetText" contenteditable="true" data-placeholder="O que está acontecendo?"></div>
     </div>
-    <div id="tweetText" contenteditable="true" data-placeholder="O que está acontecendo?"></div>
+    <div id="mediaContainer">
+      <img id="uploadedMedia" src="" alt="Mídia enviada" style="display: none;">
+    </div>
   </div>
 
   <div class="bottom-bar">
@@ -320,6 +351,12 @@
     const profileHandle = document.getElementById('profileHandle');
     const userSelect = document.getElementById('userSelect');
     const tweetContainer = document.getElementById('tweetContainer');
+
+    const imgInput = document.getElementById('imgInput');
+    const uploadImgBtn = document.getElementById('uploadImgBtn');
+    const removeImgBtn = document.getElementById('removeImgBtn');
+    const mediaContainer = document.getElementById('mediaContainer');
+    const uploadedMedia = document.getElementById('uploadedMedia');
 
     const maxChars = 340;
 
@@ -393,6 +430,34 @@
       e.preventDefault();
       const text = (e.originalEvent || e).clipboardData.getData('text/plain');
       document.execCommand('insertText', false, text);
+    });
+
+    uploadImgBtn.addEventListener('click', () => {
+      imgInput.click();
+    });
+
+    imgInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          uploadedMedia.src = event.target.result;
+          uploadedMedia.style.display = 'block';
+          mediaContainer.style.display = 'block';
+          removeImgBtn.style.display = 'inline-flex';
+          uploadImgBtn.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    removeImgBtn.addEventListener('click', () => {
+      uploadedMedia.src = '';
+      uploadedMedia.style.display = 'none';
+      mediaContainer.style.display = 'none';
+      removeImgBtn.style.display = 'none';
+      uploadImgBtn.style.display = 'inline-flex';
+      imgInput.value = '';
     });
 
     downloadBtn.addEventListener('click', () => {
