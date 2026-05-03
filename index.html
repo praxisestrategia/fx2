@@ -150,13 +150,23 @@
       display: none;
       background-color: #FAFAFA;
       border-top: 1px solid var(--border-color);
+      overflow: hidden;
+      position: relative;
+      touch-action: none;
+      cursor: grab;
     }
 
-    #mediaContainer img {
+    #mediaContainer:active {
+      cursor: grabbing;
+    }
+
+    #mediaImage {
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      display: block;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transform-origin: center;
     }
 
     #tweetHeader {
@@ -314,7 +324,8 @@
       <button class="format-btn" data-cmd="bold" title="Negrito"><strong>B</strong></button>
       <button class="format-btn" data-cmd="underline" title="Sublinhado"><u>U</u></button>
       <button class="format-btn" id="uploadImgBtn" style="flex-grow: 1; padding: 8px 16px;">Adicionar Imagem</button>
-      <button class="format-btn" id="removeImgBtn" style="display: none; padding: 8px 16px; color: #e53935;">Remover Imagem</button>
+      <button class="format-btn" id="resetImgBtn" style="display: none; padding: 8px 16px;">Resetar Ajuste</button>
+      <button class="format-btn" id="removeImgBtn" style="display: none; padding: 8px 16px; color: #e53935;">Remover</button>
       <input type="file" id="imgInput" accept="image/*" hidden>
     </div>
   </div>
@@ -331,7 +342,7 @@
       <div id="tweetText" contenteditable="true" data-placeholder="O que está acontecendo?"></div>
     </div>
     <div id="mediaContainer">
-      <img id="uploadedMedia" src="" alt="Mídia enviada" style="display: none;">
+      <div id="mediaImage"></div>
     </div>
   </div>
 
@@ -355,8 +366,9 @@
     const imgInput = document.getElementById('imgInput');
     const uploadImgBtn = document.getElementById('uploadImgBtn');
     const removeImgBtn = document.getElementById('removeImgBtn');
+    const resetImgBtn = document.getElementById('resetImgBtn');
     const mediaContainer = document.getElementById('mediaContainer');
-    const uploadedMedia = document.getElementById('uploadedMedia');
+    const mediaImage = document.getElementById('mediaImage');
 
     const maxChars = 340;
 
@@ -432,6 +444,17 @@
       document.execCommand('insertText', false, text);
     });
 
+    let imgState = { scale: 1, x: 0, y: 0 };
+
+    function applyImageTransform() {
+      mediaImage.style.transform = `translate(${imgState.x}px, ${imgState.y}px) scale(${imgState.scale})`;
+    }
+
+    function resetImage() {
+      imgState = { scale: 1, x: 0, y: 0 };
+      applyImageTransform();
+    }
+
     uploadImgBtn.addEventListener('click', () => {
       imgInput.click();
     });
@@ -441,10 +464,11 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          uploadedMedia.src = event.target.result;
-          uploadedMedia.style.display = 'block';
+          mediaImage.style.backgroundImage = `url('${event.target.result}')`;
+          resetImage();
           mediaContainer.style.display = 'block';
           removeImgBtn.style.display = 'inline-flex';
+          resetImgBtn.style.display = 'inline-flex';
           uploadImgBtn.style.display = 'none';
         };
         reader.readAsDataURL(file);
@@ -452,13 +476,77 @@
     });
 
     removeImgBtn.addEventListener('click', () => {
-      uploadedMedia.src = '';
-      uploadedMedia.style.display = 'none';
+      mediaImage.style.backgroundImage = 'none';
       mediaContainer.style.display = 'none';
       removeImgBtn.style.display = 'none';
+      resetImgBtn.style.display = 'none';
       uploadImgBtn.style.display = 'inline-flex';
       imgInput.value = '';
+      resetImage();
     });
+
+    resetImgBtn.addEventListener('click', resetImage);
+
+    // --- Gestures Logic ---
+    let pointers = new Map();
+    let initialPinchDistance = null;
+    let initialScale = 1;
+
+    mediaContainer.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      mediaContainer.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+
+    mediaContainer.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const pts = Array.from(pointers.values());
+
+      if (pts.length === 1) {
+        // Pan
+        imgState.x += e.movementX;
+        imgState.y += e.movementY;
+        applyImageTransform();
+      } else if (pts.length === 2) {
+        // Pinch Zoom
+        const p1 = pts[0];
+        const p2 = pts[1];
+        const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+        if (initialPinchDistance === null) {
+          initialPinchDistance = currentDistance;
+          initialScale = imgState.scale;
+        } else {
+          const scaleDelta = currentDistance / initialPinchDistance;
+          imgState.scale = Math.max(0.5, Math.min(5, initialScale * scaleDelta));
+          applyImageTransform();
+        }
+      }
+    });
+
+    function endPointer(e) {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) {
+        initialPinchDistance = null;
+      }
+    }
+
+    mediaContainer.addEventListener('pointerup', endPointer);
+    mediaContainer.addEventListener('pointercancel', endPointer);
+
+    // Mouse Wheel Zoom
+    mediaContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = 0.1;
+      if (e.deltaY < 0) {
+        imgState.scale = Math.min(5, imgState.scale + zoomFactor);
+      } else {
+        imgState.scale = Math.max(0.5, imgState.scale - zoomFactor);
+      }
+      applyImageTransform();
+    }, { passive: false });
 
     downloadBtn.addEventListener('click', () => {
       // Ensure the text cursor doesn't appear in the screenshot
