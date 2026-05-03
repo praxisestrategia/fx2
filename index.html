@@ -129,9 +129,9 @@
       width: 100%;
       max-width: 500px;
       background-color: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-container);
-      padding: 16px;
+      border: none;
+      border-radius: 0;
+      padding: 24px;
       margin-bottom: 16px;
       position: relative;
       overflow: hidden;
@@ -141,12 +141,12 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
 
     #profileImg {
-      width: 62px;
-      height: 62px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       object-fit: cover;
       background-color: var(--border-color);
@@ -159,13 +159,13 @@
     }
 
     #profileName {
-      font-size: 1.36rem;
+      font-size: 1.5rem;
       font-weight: 700;
       line-height: 1.2;
     }
 
     #profileHandle {
-      font-size: 1.23rem;
+      font-size: 1.25rem;
       color: var(--text-muted);
       line-height: 1.2;
       margin-top: 2px;
@@ -399,29 +399,15 @@
       // Ensure the text cursor doesn't appear in the screenshot
       tweetText.blur();
 
-      // Temporarily remove border and border-radius to avoid artifacts in the final image
-      const originalBorder = tweetContainer.style.border;
-      const originalBorderRadius = tweetContainer.style.borderRadius;
-      tweetContainer.style.border = 'none';
-      tweetContainer.style.borderRadius = '0';
-
       html2canvas(tweetContainer, {
         scale: 3,
         backgroundColor: '#FFFFFF'
       }).then(canvas => {
-        // Restore original styles
-        tweetContainer.style.border = originalBorder;
-        tweetContainer.style.borderRadius = originalBorderRadius;
-
         const link = document.createElement('a');
         link.download = 'conteudo_fake_x.png';
         link.href = canvas.toDataURL();
         link.click();
       }).catch(err => {
-        // Restore original styles even on error
-        tweetContainer.style.border = originalBorder;
-        tweetContainer.style.borderRadius = originalBorderRadius;
-
         console.error("Erro ao gerar a imagem:", err);
         alert("Ocorreu um erro ao gerar a imagem. Se estiver abrindo o arquivo localmente, tente usar um servidor local.");
       });
